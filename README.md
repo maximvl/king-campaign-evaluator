@@ -22,9 +22,7 @@ Verify:
 curl localhost:8000/health
 # {"status":"ok"}
 
-curl -X POST localhost:8000/items \
-  -H "Content-Type: application/json" \
-  -d '{"name":"widget"}'
+curl localhost:8000/players/p-42
 ```
 
 - Docs: `http://127.0.0.1:8000/docs`
@@ -41,7 +39,7 @@ curl localhost:8000/players/p-42
 
 Layout: `app/main.py` (app factory), `app/database.py` (engine/session/`get_db`),
 `app/models.py`, `app/schemas.py`, `app/crud.py`, `app/seed.py`,
-`app/routers/items.py`, `app/routers/players.py`.
+`app/routers/players.py`.
 
 ## Decisions
 
@@ -53,3 +51,4 @@ Layout: `app/main.py` (app factory), `app/database.py` (engine/session/`get_db`)
 - 2026-10-11: Added `app/seed.py` with the 6 sample players, idempotent `seed_players()` run on startup and in tests — same source of truth for dev DB and test DB.
 - 2026-10-11: Cut player writes (`POST/PATCH/DELETE`, `PlayerCreate/PlayerUpdate`, write crud) — players are read-only (`GET /players`, `GET /players/{id}`); seed is the only writer.
 - 2026-10-11: Fixed duplicate `lifespan` in `app/main.py` shadowing the seeding one — single lifespan now runs `create_all` + `seed_players` on boot.
+- 2026-10-11: Removed dummy `Item` model, schemas, crud, router, and tests — players are the only domain left.

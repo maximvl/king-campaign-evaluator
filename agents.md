@@ -19,9 +19,9 @@ Project: FastAPI + SQLAlchemy (SQLite) starter.
 
 1. Keep routes thin: routers -> `crud.py` -> models. No SQL in routers.
 2. All DB access via `get_db` dependency (`app/database.py`).
-3. Schemas: `ItemCreate` / `ItemUpdate` / `ItemRead` pattern; `from_attributes=True` on read models.
+3. Schemas: `<X>Read` pattern with `from_attributes=True` + `populate_by_name=True`; camelCase JSON via `Field(alias=...)`.
 4. SQLite dev default must keep `check_same_thread=False`; preserve for other DBs without it.
-5. Tests use in-memory SQLite + dependency override (see `tests/test_items.py`). Add/extend tests for new endpoints.
+5. Tests use in-memory SQLite + dependency override (see `tests/test_players.py`). Add/extend tests for new endpoints.
 
 ## 6. README decision log (mandatory)
 

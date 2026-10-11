@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from app import models
 from app.config import settings
 from app.database import SessionLocal, engine
-from app.routers import items, players
+from app.routers import players
 from app.seed import seed_players
 
 
@@ -24,7 +24,6 @@ def create_app() -> FastAPI:
     def health():
         return {"status": "ok"}
 
-    app.include_router(items.router)
     app.include_router(players.router)
     return app
 
