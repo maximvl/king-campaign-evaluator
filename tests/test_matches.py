@@ -33,7 +33,6 @@ def test_save_and_get_match():
         assert p88 is not None
         saved = crud.save_match(
             db,
-            campaign_id="c-1",
             player=p88,
             evaluation_id="e-1",
             minimum_level=10,
@@ -41,34 +40,44 @@ def test_save_and_get_match():
         )
         assert saved.matches is True
 
-        fetched = crud.get_match(db, "c-1", "p-88", "e-1")
+        fetched = crud.get_match(db, "p-88", "e-1")
         assert fetched is not None
         assert fetched.matches is True
-        assert fetched.countries == ["ES"]
 
         # Re-evaluate with stricter conditions upserts in place.
         updated = crud.save_match(
             db,
-            campaign_id="c-1",
             player=p88,
             evaluation_id="e-1",
             minimum_level=11,
             countries=["ES"],
         )
         assert updated.matches is False
-        assert crud.get_match(db, "c-1", "nope", "e-1") is None
+        assert crud.get_match(db, "nope", "e-1") is None
+
+
+def _make_run(db, evaluation_id, campaign_id="c-2"):
+    if crud.get_evaluation(db, evaluation_id) is None:
+        crud.create_evaluation(
+            db,
+            evaluation_id=evaluation_id,
+            campaign_id=campaign_id,
+            minimum_level=10,
+            countries=[],
+            total=3,
+        )
 
 
 def test_list_matches():
     with TestingSessionLocal() as db:
+        _make_run(db, "e-list")
         for pid in ("p-42", "p-77", "p-88"):
             player = crud.get_player(db, pid)
             assert player is not None
             crud.save_match(
                 db,
-                campaign_id="c-2",
                 player=player,
-                evaluation_id="e-1",
+                evaluation_id="e-list",
                 minimum_level=10,
                 countries=[],
             )

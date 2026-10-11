@@ -39,7 +39,6 @@ def evaluate_match(
 def save_match(
     db: Session,
     *,
-    campaign_id: str,
     player: models.Player,
     evaluation_id: str,
     minimum_level: int,
@@ -47,16 +46,13 @@ def save_match(
 ) -> models.CampaignMatch:
     """Evaluate conditions against a player and upsert the result."""
     result = evaluate_match(player, minimum_level, countries)
-    record = get_match(db, campaign_id, player.player_id, evaluation_id)
+    record = get_match(db, player.player_id, evaluation_id)
     if record is None:
         record = models.CampaignMatch(
-            campaign_id=campaign_id,
             player_id=player.player_id,
             evaluation_id=evaluation_id,
         )
         db.add(record)
-    record.minimum_level = minimum_level
-    record.countries = list(countries)
     record.matches = result
     db.commit()
     db.refresh(record)
@@ -64,11 +60,10 @@ def save_match(
 
 
 def get_match(
-    db: Session, campaign_id: str, player_id: str, evaluation_id: str
+    db: Session, player_id: str, evaluation_id: str
 ) -> models.CampaignMatch | None:
     stmt = (
         select(models.CampaignMatch)
-        .where(models.CampaignMatch.campaign_id == campaign_id)
         .where(models.CampaignMatch.player_id == player_id)
         .where(models.CampaignMatch.evaluation_id == evaluation_id)
     )
@@ -145,7 +140,6 @@ def execute_evaluation(
                         continue
                     record = save_match(
                         db,
-                        campaign_id=campaign_id,
                         player=player,
                         evaluation_id=evaluation_id,
                         minimum_level=minimum_level,
@@ -192,8 +186,14 @@ def list_matches(
 ) -> list[models.CampaignMatch]:
     stmt = (
         select(models.CampaignMatch)
-        .where(models.CampaignMatch.campaign_id == campaign_id)
-        .order_by(models.CampaignMatch.player_id)
+        .join(
+            models.Evaluation,
+            models.CampaignMatch.evaluation_id == models.Evaluation.evaluation_id,
+        )
+        .where(models.Evaluation.campaign_id == campaign_id)
+        .order_by(
+            models.CampaignMatch.evaluation_id, models.CampaignMatch.player_id
+        )
     )
     if matches_only:
         stmt = stmt.where(models.CampaignMatch.matches.is_(True))

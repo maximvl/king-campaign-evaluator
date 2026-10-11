@@ -90,8 +90,8 @@ def test_evaluation_persists_matches():
     client.post("/campaign-evaluations", json=_payload(evaluationId="e-2"))
     _wait_completed("e-2")
     with TestingSessionLocal() as db:
-        assert crud.get_match(db, "summer-boost", "p-42", "e-2") is not None
-        assert crud.get_match(db, "summer-boost", "p-42", "e-2").matches is True
+        assert crud.get_match(db, "p-42", "e-2") is not None
+        assert crud.get_match(db, "p-42", "e-2").matches is True
         rows = crud.list_matches(db, campaign_id="summer-boost")
         assert {r.evaluation_id for r in rows} >= {"e-1", "e-2"}
 

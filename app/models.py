@@ -18,21 +18,18 @@ class Player(Base):
 
 
 class CampaignMatch(Base):
-    """Whether a player satisfies a campaign's conditions.
+    """Whether a player matched an evaluation's rules.
 
-    One row per (campaign, player, evaluation). `countries` is an allowlist —
-    empty means no country restriction.
+    One row per (evaluation, player). Campaign and rules live on the
+    `Evaluation` run row — this table stores only the outcome.
     """
 
     __tablename__ = "campaign_matches"
-    __table_args__ = (UniqueConstraint("campaign_id", "player_id", "evaluation_id"),)
+    __table_args__ = (UniqueConstraint("evaluation_id", "player_id"),)
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    campaign_id: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    evaluation_id: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
     player_id: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
-    evaluation_id: Mapped[str] = mapped_column(String(50), nullable=False)
-    minimum_level: Mapped[int] = mapped_column(nullable=False)
-    countries: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
     matches: Mapped[bool] = mapped_column(nullable=False, index=True)
 
 

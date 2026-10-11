@@ -78,3 +78,4 @@ Layout: `app/main.py` (app factory), `app/database.py` (engine/session/`get_db`)
 - 2026-10-11: Added stored `rules{minimumLevel, countries}` to evaluation responses (`POST` echoes request, `GET` reads first row) — result is self-describing.
 - 2026-10-11: `POST /campaign-evaluations` rejects reused `evaluationId` with `409` (checked via `evaluation_exists` before batching) — evaluations are immutable runs.
 - 2026-10-11: Async evaluation via `BackgroundTasks` (`POST` → `202`, job in `crud.execute_evaluation` with own session) plus `Evaluation` run table (`status`, `processed/total`, `error`) — `GET` returns run status/progress, unknown players are skipped without failing the batch.
+- 2026-10-11: Slimmed `CampaignMatch` to `(evaluation_id, player_id, matches)` — campaign/rules live only on the `Evaluation` run row; `list_matches` by campaign now joins `evaluations`.
