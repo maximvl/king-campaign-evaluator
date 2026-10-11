@@ -8,6 +8,7 @@
 - All queried columns indexed (PKs, filters, join keys, ordering).
 - Empty `countries` list means any country matches.
 - Per-player errors (e.g. unknown id) are stored as `matches=False` rows with an `error` message and never break the whole evaluation.
+- Evaluations are immutable: resubmitting an existing `evaluationId` fails with `409`.
 
 ## Run from scratch
 
