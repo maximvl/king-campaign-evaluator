@@ -1,5 +1,15 @@
 # king-campaign-evaluator
+
 excercise
+
+## Key decisions
+
+- Inputs validated via Pydantic schemas (camelCase API, `populate_by_name`).
+- Evaluations run as async jobs (`BackgroundTasks`, `POST` → `202`); `GET` polls run `status`/`progress` stored in an `evaluations` table.
+- Players fetched and evaluated in configurable batches (`EVALUATION_BATCH_SIZE`).
+- All queried columns indexed (PKs, filters, join keys, ordering).
+- Empty `countries` list means any country matches.
+- Per-player errors (e.g. unknown id) are stored as `matches=False` rows with an `error` message and never break the whole evaluation.
 
 ## Run from scratch
 
@@ -77,5 +87,6 @@ Layout: `app/main.py` (app factory), `app/database.py` (engine/session/`get_db`)
 - 2026-10-11: Added `GET /campaign-evaluations/{evaluationId}` returning stored `CampaignMatch` rows (`404` when unknown) — same response shape as `POST`.
 - 2026-10-11: Added stored `rules{minimumLevel, countries}` to evaluation responses (`POST` echoes request, `GET` reads first row) — result is self-describing.
 - 2026-10-11: `POST /campaign-evaluations` rejects reused `evaluationId` with `409` (checked via `evaluation_exists` before batching) — evaluations are immutable runs.
-- 2026-10-11: Async evaluation via `BackgroundTasks` (`POST` → `202`, job in `crud.execute_evaluation` with own session) plus `Evaluation` run table (`status`, `processed/total`, `error`) — `GET` returns run status/progress, unknown players are skipped without failing the batch.
+- 2026-10-11: Async evaluation via `BackgroundTasks` (`POST` → `202`, job in `crud.execute_evaluation` with own session) plus `Evaluation` run table (`status`, `processed/total`, `error`) — `GET` returns run status/progress, unknown players stored as error rows without failing the batch.
 - 2026-10-11: Slimmed `CampaignMatch` to `(evaluation_id, player_id, matches)` — campaign/rules live only on the `Evaluation` run row; `list_matches` by campaign now joins `evaluations`.
+- 2026-10-11: Added `CampaignMatch.error` + `save_unknown` — unevaluatable ids persist as `matches=False` rows so `GET` reports every requested player case by case.
