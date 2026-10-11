@@ -48,9 +48,17 @@ class PlayerEvaluationResult(BaseModel):
     error: str | None = None
 
 
+class StoredRules(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    minimum_level: int = Field(alias="minimumLevel")
+    countries: list[str] = Field(default_factory=list)
+
+
 class CampaignEvaluationResponse(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
     evaluation_id: str = Field(alias="evaluationId")
     campaign_id: str = Field(alias="campaignId")
+    rules: StoredRules
     results: list[PlayerEvaluationResult]

@@ -45,6 +45,8 @@ curl -X POST localhost:8000/campaign-evaluations \
   -d '{"evaluationId":"e-1",
        "rules":{"campaignId":"summer-boost","minimumLevel":10,"countries":["ES","SE"]},
        "playerIds":["p-42","p-77"]}'
+
+curl localhost:8000/campaign-evaluations/e-1
 ```
 
 Layout: `app/main.py` (app factory), `app/database.py` (engine/session/`get_db`),
@@ -69,3 +71,5 @@ Layout: `app/main.py` (app factory), `app/database.py` (engine/session/`get_db`)
 - 2026-10-11: Added mandatory `evaluation_id` to `CampaignMatch`, part of the unique combo `(campaign_id, player_id, evaluation_id)` — same player/campaign can be evaluated multiple times.
 - 2026-10-11: Added `POST /campaign-evaluations` (201) evaluating `rules` per `playerIds` and upserting `CampaignMatch` rows — unknown players reported per-item (`error`) instead of failing the batch.
 - 2026-10-11: Batched player fetching in evaluation via `crud.get_players_by_ids` (`WHERE IN`), chunk size from `evaluation_batch_size` in `app/config.py` (env `EVALUATION_BATCH_SIZE`, default 100) — each batch is fetched then evaluated before the next is loaded, request order preserved.
+- 2026-10-11: Added `GET /campaign-evaluations/{evaluationId}` returning stored `CampaignMatch` rows (`404` when unknown) — same response shape as `POST`.
+- 2026-10-11: Added stored `rules{minimumLevel, countries}` to evaluation responses (`POST` echoes request, `GET` reads first row) — result is self-describing.

@@ -75,6 +75,17 @@ def get_match(
     return db.scalars(stmt).one_or_none()
 
 
+def list_evaluation_matches(
+    db: Session, evaluation_id: str, skip: int = 0, limit: int = 500
+) -> list[models.CampaignMatch]:
+    stmt = (
+        select(models.CampaignMatch)
+        .where(models.CampaignMatch.evaluation_id == evaluation_id)
+        .order_by(models.CampaignMatch.player_id)
+    )
+    return list(db.scalars(stmt.offset(skip).limit(limit)).all())
+
+
 def list_matches(
     db: Session,
     campaign_id: str,

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app import crud, models, schemas
@@ -44,5 +44,36 @@ def start_evaluation(data: schemas.CampaignEvaluationRequest, db: Session = Depe
     return schemas.CampaignEvaluationResponse(
         evaluation_id=data.evaluation_id,
         campaign_id=data.rules.campaign_id,
+        rules=schemas.StoredRules(
+            minimum_level=data.rules.minimum_level,
+            countries=data.rules.countries,
+        ),
         results=results,
+    )
+
+
+@router.get(
+    "/campaign-evaluations/{evaluation_id}",
+    response_model=schemas.CampaignEvaluationResponse,
+)
+def get_evaluation(
+    evaluation_id: str,
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=500, ge=1, le=5000),
+    db: Session = Depends(get_db),
+):
+    rows = crud.list_evaluation_matches(db, evaluation_id, skip=skip, limit=limit)
+    if not rows:
+        raise HTTPException(status_code=404, detail="Evaluation not found")
+    return schemas.CampaignEvaluationResponse(
+        evaluation_id=evaluation_id,
+        campaign_id=rows[0].campaign_id,
+        rules=schemas.StoredRules(
+            minimum_level=rows[0].minimum_level,
+            countries=rows[0].countries,
+        ),
+        results=[
+            schemas.PlayerEvaluationResult(player_id=r.player_id, matches=r.matches)
+            for r in rows
+        ],
     )

@@ -53,6 +53,7 @@ def test_start_evaluation():
     body = resp.json()
     assert body["evaluationId"] == "e-1"
     assert body["campaignId"] == "summer-boost"
+    assert body["rules"] == {"minimumLevel": 10, "countries": ["ES", "SE"]}
     by_id = {r["playerId"]: r for r in body["results"]}
     assert by_id["p-42"]["matches"] is True  # ES, level 18
     assert by_id["p-77"]["matches"] is False  # SE, level 6 < 10
@@ -101,3 +102,20 @@ def test_batched_fetch_same_results(monkeypatch):
     assert results[0]["matches"] is True
     assert results[1]["matches"] is False
     assert results[2]["error"] == "player not found"
+
+
+def test_get_evaluation():
+    client.post("/campaign-evaluations", json=_payload(evaluationId="e-get"))
+    resp = client.get("/campaign-evaluations/e-get")
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["evaluationId"] == "e-get"
+    assert body["campaignId"] == "summer-boost"
+    assert body["rules"] == {"minimumLevel": 10, "countries": ["ES", "SE"]}
+    by_id = {r["playerId"]: r for r in body["results"]}
+    assert by_id["p-42"]["matches"] is True
+    assert by_id["p-77"]["matches"] is False
+
+
+def test_get_evaluation_not_found():
+    assert client.get("/campaign-evaluations/e-missing").status_code == 404
