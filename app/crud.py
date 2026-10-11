@@ -54,6 +54,25 @@ def save_match(
         )
         db.add(record)
     record.matches = result
+    record.error = None
+    db.commit()
+    db.refresh(record)
+    return record
+
+
+def save_unknown(
+    db: Session, *, player_id: str, evaluation_id: str, error: str
+) -> models.CampaignMatch:
+    """Record an unevaluatable player (e.g. unknown id) without failing the run."""
+    record = get_match(db, player_id, evaluation_id)
+    if record is None:
+        record = models.CampaignMatch(
+            player_id=player_id,
+            evaluation_id=evaluation_id,
+        )
+        db.add(record)
+    record.matches = False
+    record.error = error
     db.commit()
     db.refresh(record)
     return record
@@ -137,6 +156,12 @@ def execute_evaluation(
                 for pid in chunk:
                     player = found.get(pid)
                     if player is None:
+                        save_unknown(
+                            db,
+                            player_id=pid,
+                            evaluation_id=evaluation_id,
+                            error="player not found",
+                        )
                         continue
                     record = save_match(
                         db,

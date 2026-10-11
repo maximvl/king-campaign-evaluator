@@ -31,6 +31,7 @@ class CampaignMatch(Base):
     evaluation_id: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
     player_id: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
     matches: Mapped[bool] = mapped_column(nullable=False, index=True)
+    error: Mapped[str | None] = mapped_column(String(200), nullable=True)
 
 
 class Evaluation(Base):

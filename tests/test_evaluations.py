@@ -103,10 +103,10 @@ def test_unknown_player_reported_not_failed():
     body = _wait_completed("e-3")
     assert body["status"] == "completed"
     assert body["progress"] == {"processed": 2, "total": 2}
-    # Unknown players are skipped: no stored row, batch still completes.
     by_id = {r["playerId"]: r for r in body["results"]}
     assert by_id["p-42"]["matches"] is True
-    assert "p-404" not in by_id
+    assert by_id["p-404"]["matches"] is False
+    assert by_id["p-404"]["error"] == "player not found"
 
 
 def test_empty_player_ids_rejected():
@@ -127,12 +127,15 @@ def test_batched_fetch_same_results(monkeypatch):
     )
     assert resp.status_code == 202, resp.text
     body = _wait_completed("e-batch")
-    # Duplicates upsert the same row; unknown ids store nothing.
+    # Duplicates upsert the same row; unknown ids store an error row.
     assert body["progress"] == {"processed": 4, "total": 4}
     results = body["results"]
-    assert [r["playerId"] for r in results] == ["p-42", "p-77"]
-    assert results[0]["matches"] is True
-    assert results[1]["matches"] is False
+    assert [r["playerId"] for r in results] == ["p-404", "p-42", "p-77"]
+    by_id = {r["playerId"]: r for r in results}
+    assert by_id["p-42"]["matches"] is True
+    assert by_id["p-77"]["matches"] is False
+    assert by_id["p-404"]["matches"] is False
+    assert by_id["p-404"]["error"] == "player not found"
 
 
 def test_get_evaluation():

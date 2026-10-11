@@ -75,7 +75,9 @@ def get_evaluation(
     return _evaluation_response(
         run,
         [
-            schemas.PlayerEvaluationResult(player_id=r.player_id, matches=r.matches)
+            schemas.PlayerEvaluationResult(
+                player_id=r.player_id, matches=r.matches, error=r.error
+            )
             for r in rows
         ],
     )
