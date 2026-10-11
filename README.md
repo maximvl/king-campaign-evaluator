@@ -37,9 +37,19 @@ curl "localhost:8000/players?country=ES"
 curl localhost:8000/players/p-42
 ```
 
+Start an evaluation:
+
+```bash
+curl -X POST localhost:8000/campaign-evaluations \
+  -H "Content-Type: application/json" \
+  -d '{"evaluationId":"e-1",
+       "rules":{"campaignId":"summer-boost","minimumLevel":10,"countries":["ES","SE"]},
+       "playerIds":["p-42","p-77"]}'
+```
+
 Layout: `app/main.py` (app factory), `app/database.py` (engine/session/`get_db`),
 `app/models.py`, `app/schemas.py`, `app/crud.py`, `app/seed.py`,
-`app/routers/players.py`.
+`app/routers/players.py`, `app/routers/evaluations.py`.
 
 ## Decisions
 
@@ -57,3 +67,5 @@ Layout: `app/main.py` (app factory), `app/database.py` (engine/session/`get_db`)
 - 2026-10-11: Switched `CampaignMatch` to surrogate `id` PK with `UniqueConstraint(campaign_id, player_id)` and index on `campaign_id` — combo still unique, lookups by campaign are indexed.
 - 2026-10-11: Made `campaign_id` required in `list_matches` — matches are always listed per campaign.
 - 2026-10-11: Added mandatory `evaluation_id` to `CampaignMatch`, part of the unique combo `(campaign_id, player_id, evaluation_id)` — same player/campaign can be evaluated multiple times.
+- 2026-10-11: Added `POST /campaign-evaluations` (201) evaluating `rules` per `playerIds` and upserting `CampaignMatch` rows — unknown players reported per-item (`error`) instead of failing the batch.
+- 2026-10-11: Batched player fetching in evaluation via `crud.get_players_by_ids` (`WHERE IN`), chunk size from `evaluation_batch_size` in `app/config.py` (env `EVALUATION_BATCH_SIZE`, default 100) — each batch is fetched then evaluated before the next is loaded, request order preserved.

@@ -8,6 +8,13 @@ def get_player(db: Session, player_id: str) -> models.Player | None:
     return db.get(models.Player, player_id)
 
 
+def get_players_by_ids(db: Session, player_ids: list[str]) -> list[models.Player]:
+    if not player_ids:
+        return []
+    stmt = select(models.Player).where(models.Player.player_id.in_(player_ids))
+    return list(db.scalars(stmt).all())
+
+
 def list_players(
     db: Session, skip: int = 0, limit: int = 100, country: str | None = None
 ) -> list[models.Player]:

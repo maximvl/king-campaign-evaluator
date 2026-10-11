@@ -22,3 +22,35 @@ class CampaignMatchRead(BaseModel):
     minimum_level: int = Field(ge=0, alias="minimumLevel")
     countries: list[str] = Field(default_factory=list)
     matches: bool
+
+
+class EvaluationRules(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    campaign_id: str = Field(min_length=1, max_length=50, alias="campaignId")
+    minimum_level: int = Field(ge=0, alias="minimumLevel")
+    countries: list[str] = Field(default_factory=list)
+
+
+class CampaignEvaluationRequest(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    evaluation_id: str = Field(min_length=1, max_length=50, alias="evaluationId")
+    rules: EvaluationRules
+    player_ids: list[str] = Field(min_length=1, alias="playerIds")
+
+
+class PlayerEvaluationResult(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    player_id: str = Field(alias="playerId")
+    matches: bool
+    error: str | None = None
+
+
+class CampaignEvaluationResponse(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    evaluation_id: str = Field(alias="evaluationId")
+    campaign_id: str = Field(alias="campaignId")
+    results: list[PlayerEvaluationResult]
