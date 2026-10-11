@@ -1,7 +1,5 @@
 # king-campaign-evaluator
 
-excercise
-
 ## Key decisions
 
 - Inputs validated via Pydantic schemas (camelCase API, `populate_by_name`).
