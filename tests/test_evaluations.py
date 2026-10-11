@@ -119,3 +119,11 @@ def test_get_evaluation():
 
 def test_get_evaluation_not_found():
     assert client.get("/campaign-evaluations/e-missing").status_code == 404
+
+
+def test_duplicate_evaluation_id_rejected():
+    body = _payload(evaluationId="e-dup")
+    assert client.post("/campaign-evaluations", json=body).status_code == 201
+    dup = client.post("/campaign-evaluations", json=body)
+    assert dup.status_code == 409
+    assert dup.json()["detail"] == "Evaluation already exists"

@@ -14,6 +14,8 @@ router = APIRouter(tags=["evaluations"])
     status_code=status.HTTP_201_CREATED,
 )
 def start_evaluation(data: schemas.CampaignEvaluationRequest, db: Session = Depends(get_db)):
+    if crud.evaluation_exists(db, data.evaluation_id):
+        raise HTTPException(status_code=409, detail="Evaluation already exists")
     batch_size = settings.evaluation_batch_size
     results: list[schemas.PlayerEvaluationResult] = []
     for i in range(0, len(data.player_ids), batch_size):

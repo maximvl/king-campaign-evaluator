@@ -75,6 +75,13 @@ def get_match(
     return db.scalars(stmt).one_or_none()
 
 
+def evaluation_exists(db: Session, evaluation_id: str) -> bool:
+    stmt = select(models.CampaignMatch.id).where(
+        models.CampaignMatch.evaluation_id == evaluation_id
+    )
+    return db.scalars(stmt.limit(1)).first() is not None
+
+
 def list_evaluation_matches(
     db: Session, evaluation_id: str, skip: int = 0, limit: int = 500
 ) -> list[models.CampaignMatch]:

@@ -73,3 +73,4 @@ Layout: `app/main.py` (app factory), `app/database.py` (engine/session/`get_db`)
 - 2026-10-11: Batched player fetching in evaluation via `crud.get_players_by_ids` (`WHERE IN`), chunk size from `evaluation_batch_size` in `app/config.py` (env `EVALUATION_BATCH_SIZE`, default 100) — each batch is fetched then evaluated before the next is loaded, request order preserved.
 - 2026-10-11: Added `GET /campaign-evaluations/{evaluationId}` returning stored `CampaignMatch` rows (`404` when unknown) — same response shape as `POST`.
 - 2026-10-11: Added stored `rules{minimumLevel, countries}` to evaluation responses (`POST` echoes request, `GET` reads first row) — result is self-describing.
+- 2026-10-11: `POST /campaign-evaluations` rejects reused `evaluationId` with `409` (checked via `evaluation_exists` before batching) — evaluations are immutable runs.
