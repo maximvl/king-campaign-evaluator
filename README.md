@@ -56,3 +56,4 @@ Layout: `app/main.py` (app factory), `app/database.py` (engine/session/`get_db`)
 - 2026-10-11: Dropped FK from `CampaignMatch.player_id` — plain string, no referential link to `players`.
 - 2026-10-11: Switched `CampaignMatch` to surrogate `id` PK with `UniqueConstraint(campaign_id, player_id)` and index on `campaign_id` — combo still unique, lookups by campaign are indexed.
 - 2026-10-11: Made `campaign_id` required in `list_matches` — matches are always listed per campaign.
+- 2026-10-11: Added mandatory `evaluation_id` to `CampaignMatch`, part of the unique combo `(campaign_id, player_id, evaluation_id)` — same player/campaign can be evaluated multiple times.

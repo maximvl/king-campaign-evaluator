@@ -32,21 +32,31 @@ def test_save_and_get_match():
         p88 = crud.get_player(db, "p-88")  # ES, level 10
         assert p88 is not None
         saved = crud.save_match(
-            db, campaign_id="c-1", player=p88, minimum_level=10, countries=["ES"]
+            db,
+            campaign_id="c-1",
+            player=p88,
+            evaluation_id="e-1",
+            minimum_level=10,
+            countries=["ES"],
         )
         assert saved.matches is True
 
-        fetched = crud.get_match(db, "c-1", "p-88")
+        fetched = crud.get_match(db, "c-1", "p-88", "e-1")
         assert fetched is not None
         assert fetched.matches is True
         assert fetched.countries == ["ES"]
 
         # Re-evaluate with stricter conditions upserts in place.
         updated = crud.save_match(
-            db, campaign_id="c-1", player=p88, minimum_level=11, countries=["ES"]
+            db,
+            campaign_id="c-1",
+            player=p88,
+            evaluation_id="e-1",
+            minimum_level=11,
+            countries=["ES"],
         )
         assert updated.matches is False
-        assert crud.get_match(db, "c-1", "nope") is None
+        assert crud.get_match(db, "c-1", "nope", "e-1") is None
 
 
 def test_list_matches():
@@ -55,7 +65,12 @@ def test_list_matches():
             player = crud.get_player(db, pid)
             assert player is not None
             crud.save_match(
-                db, campaign_id="c-2", player=player, minimum_level=10, countries=[]
+                db,
+                campaign_id="c-2",
+                player=player,
+                evaluation_id="e-1",
+                minimum_level=10,
+                countries=[],
             )
         all_rows = crud.list_matches(db, campaign_id="c-2")
         assert len(all_rows) == 3

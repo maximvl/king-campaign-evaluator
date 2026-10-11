@@ -18,6 +18,7 @@ class CampaignMatchRead(BaseModel):
     id: int
     campaign_id: str = Field(alias="campaignId")
     player_id: str = Field(alias="playerId")
+    evaluation_id: str = Field(alias="evaluationId")
     minimum_level: int = Field(ge=0, alias="minimumLevel")
     countries: list[str] = Field(default_factory=list)
     matches: bool

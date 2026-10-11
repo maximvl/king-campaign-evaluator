@@ -34,14 +34,19 @@ def save_match(
     *,
     campaign_id: str,
     player: models.Player,
+    evaluation_id: str,
     minimum_level: int,
     countries: list[str],
 ) -> models.CampaignMatch:
     """Evaluate conditions against a player and upsert the result."""
     result = evaluate_match(player, minimum_level, countries)
-    record = get_match(db, campaign_id, player.player_id)
+    record = get_match(db, campaign_id, player.player_id, evaluation_id)
     if record is None:
-        record = models.CampaignMatch(campaign_id=campaign_id, player_id=player.player_id)
+        record = models.CampaignMatch(
+            campaign_id=campaign_id,
+            player_id=player.player_id,
+            evaluation_id=evaluation_id,
+        )
         db.add(record)
     record.minimum_level = minimum_level
     record.countries = list(countries)
@@ -51,11 +56,14 @@ def save_match(
     return record
 
 
-def get_match(db: Session, campaign_id: str, player_id: str) -> models.CampaignMatch | None:
+def get_match(
+    db: Session, campaign_id: str, player_id: str, evaluation_id: str
+) -> models.CampaignMatch | None:
     stmt = (
         select(models.CampaignMatch)
         .where(models.CampaignMatch.campaign_id == campaign_id)
         .where(models.CampaignMatch.player_id == player_id)
+        .where(models.CampaignMatch.evaluation_id == evaluation_id)
     )
     return db.scalars(stmt).one_or_none()
 
