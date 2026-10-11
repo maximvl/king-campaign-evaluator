@@ -4,13 +4,16 @@ from fastapi import FastAPI
 
 from app import models
 from app.config import settings
-from app.database import engine
-from app.routers import items
+from app.database import SessionLocal, engine
+from app.routers import items, players
+from app.seed import seed_players
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     models.Base.metadata.create_all(bind=engine)
+    with SessionLocal() as db:
+        seed_players(db)
     yield
 
 
@@ -22,6 +25,7 @@ def create_app() -> FastAPI:
         return {"status": "ok"}
 
     app.include_router(items.router)
+    app.include_router(players.router)
     return app
 
 

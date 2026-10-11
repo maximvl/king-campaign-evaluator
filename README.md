@@ -29,10 +29,19 @@ curl -X POST localhost:8000/items \
 
 - Docs: `http://127.0.0.1:8000/docs`
 - Tests: `pytest -q`
-- Reset DB: stop server, `rm app.db`, restart.
+- Reset DB: stop server, `rm app.db`, restart (dev DB reseeds on boot).
+
+Players (read-only, seeded, 6 records — see `app/seed.py`):
+
+```bash
+curl localhost:8000/players | head -c 300
+curl "localhost:8000/players?country=ES"
+curl localhost:8000/players/p-42
+```
 
 Layout: `app/main.py` (app factory), `app/database.py` (engine/session/`get_db`),
-`app/models.py`, `app/schemas.py`, `app/crud.py`, `app/routers/items.py`.
+`app/models.py`, `app/schemas.py`, `app/crud.py`, `app/seed.py`,
+`app/routers/items.py`, `app/routers/players.py`.
 
 ## Decisions
 
@@ -40,3 +49,7 @@ Layout: `app/main.py` (app factory), `app/database.py` (engine/session/`get_db`)
 - 2026-10-11: Used `create_app()` factory with `lifespan` running `Base.metadata.create_all` — simple init without migrations for starter stage.
 - 2026-10-11: Split `models.py` / `schemas.py` / `crud.py` / `routers/` — keeps routes thin and models testable.
 - 2026-10-11: Added `agents.md` with mandatory README decision-log rule — keeps architectural rationale visible.
+- 2026-10-11: Added `Player(player_id PK, country, level, last_active_at)` from sample records — natural string PK matches `playerId`, camelCase API via Pydantic aliases.
+- 2026-10-11: Added `app/seed.py` with the 6 sample players, idempotent `seed_players()` run on startup and in tests — same source of truth for dev DB and test DB.
+- 2026-10-11: Cut player writes (`POST/PATCH/DELETE`, `PlayerCreate/PlayerUpdate`, write crud) — players are read-only (`GET /players`, `GET /players/{id}`); seed is the only writer.
+- 2026-10-11: Fixed duplicate `lifespan` in `app/main.py` shadowing the seeding one — single lifespan now runs `create_all` + `seed_players` on boot.
