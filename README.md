@@ -37,7 +37,7 @@ curl "localhost:8000/players?country=ES"
 curl localhost:8000/players/p-42
 ```
 
-Start an evaluation:
+Start an evaluation (async — returns `202`, poll `GET` for `status`/`progress`):
 
 ```bash
 curl -X POST localhost:8000/campaign-evaluations \
@@ -47,6 +47,9 @@ curl -X POST localhost:8000/campaign-evaluations \
        "playerIds":["p-42","p-77"]}'
 
 curl localhost:8000/campaign-evaluations/e-1
+# {"evaluationId":"e-1","campaignId":"summer-boost",
+#  "rules":{...},"status":"completed","progress":{"processed":2,"total":2},
+#  "results":[...]}
 ```
 
 Layout: `app/main.py` (app factory), `app/database.py` (engine/session/`get_db`),
@@ -69,8 +72,9 @@ Layout: `app/main.py` (app factory), `app/database.py` (engine/session/`get_db`)
 - 2026-10-11: Switched `CampaignMatch` to surrogate `id` PK with `UniqueConstraint(campaign_id, player_id)` and index on `campaign_id` — combo still unique, lookups by campaign are indexed.
 - 2026-10-11: Made `campaign_id` required in `list_matches` — matches are always listed per campaign.
 - 2026-10-11: Added mandatory `evaluation_id` to `CampaignMatch`, part of the unique combo `(campaign_id, player_id, evaluation_id)` — same player/campaign can be evaluated multiple times.
-- 2026-10-11: Added `POST /campaign-evaluations` (201) evaluating `rules` per `playerIds` and upserting `CampaignMatch` rows — unknown players reported per-item (`error`) instead of failing the batch.
+- 2026-10-11: Added `POST /campaign-evaluations` (201, sync at the time) evaluating `rules` per `playerIds` — later made async (see below).
 - 2026-10-11: Batched player fetching in evaluation via `crud.get_players_by_ids` (`WHERE IN`), chunk size from `evaluation_batch_size` in `app/config.py` (env `EVALUATION_BATCH_SIZE`, default 100) — each batch is fetched then evaluated before the next is loaded, request order preserved.
 - 2026-10-11: Added `GET /campaign-evaluations/{evaluationId}` returning stored `CampaignMatch` rows (`404` when unknown) — same response shape as `POST`.
 - 2026-10-11: Added stored `rules{minimumLevel, countries}` to evaluation responses (`POST` echoes request, `GET` reads first row) — result is self-describing.
 - 2026-10-11: `POST /campaign-evaluations` rejects reused `evaluationId` with `409` (checked via `evaluation_exists` before batching) — evaluations are immutable runs.
+- 2026-10-11: Async evaluation via `BackgroundTasks` (`POST` → `202`, job in `crud.execute_evaluation` with own session) plus `Evaluation` run table (`status`, `processed/total`, `error`) — `GET` returns run status/progress, unknown players are skipped without failing the batch.

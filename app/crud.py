@@ -76,10 +76,100 @@ def get_match(
 
 
 def evaluation_exists(db: Session, evaluation_id: str) -> bool:
-    stmt = select(models.CampaignMatch.id).where(
-        models.CampaignMatch.evaluation_id == evaluation_id
+    return db.get(models.Evaluation, evaluation_id) is not None
+
+
+def get_evaluation(db: Session, evaluation_id: str) -> models.Evaluation | None:
+    return db.get(models.Evaluation, evaluation_id)
+
+
+def create_evaluation(
+    db: Session,
+    *,
+    evaluation_id: str,
+    campaign_id: str,
+    minimum_level: int,
+    countries: list[str],
+    total: int,
+) -> models.Evaluation:
+    run = models.Evaluation(
+        evaluation_id=evaluation_id,
+        campaign_id=campaign_id,
+        minimum_level=minimum_level,
+        countries=list(countries),
+        status=models.Evaluation.PENDING,
+        total=total,
     )
-    return db.scalars(stmt.limit(1)).first() is not None
+    db.add(run)
+    db.commit()
+    db.refresh(run)
+    return run
+
+
+def update_evaluation(db: Session, run: models.Evaluation, **fields) -> models.Evaluation:
+    for field, value in fields.items():
+        setattr(run, field, value)
+    db.commit()
+    db.refresh(run)
+    return run
+
+
+def execute_evaluation(
+    db_factory,
+    *,
+    evaluation_id: str,
+    campaign_id: str,
+    minimum_level: int,
+    countries: list[str],
+    player_ids: list[str],
+    batch_size: int,
+) -> None:
+    """Run an evaluation in a worker: fetch a batch, evaluate it, repeat.
+
+    Uses its own session (never the request's). Progress is committed per
+    batch; any failure marks the run failed instead of raising.
+    """
+    with db_factory() as db:
+        run = get_evaluation(db, evaluation_id)
+        if run is None:
+            return
+        update_evaluation(db, run, status=models.Evaluation.RUNNING)
+        try:
+            matched_total = 0
+            for i in range(0, len(player_ids), batch_size):
+                chunk = player_ids[i : i + batch_size]
+                found = {p.player_id: p for p in get_players_by_ids(db, chunk)}
+                for pid in chunk:
+                    player = found.get(pid)
+                    if player is None:
+                        continue
+                    record = save_match(
+                        db,
+                        campaign_id=campaign_id,
+                        player=player,
+                        evaluation_id=evaluation_id,
+                        minimum_level=minimum_level,
+                        countries=countries,
+                    )
+                    if record.matches:
+                        matched_total += 1
+                update_evaluation(
+                    db,
+                    run,
+                    processed=min(i + batch_size, len(player_ids)),
+                    matched=matched_total,
+                )
+            update_evaluation(
+                db,
+                run,
+                status=models.Evaluation.COMPLETED,
+                processed=len(player_ids),
+                matched=matched_total,
+            )
+        except Exception as exc:
+            update_evaluation(
+                db, run, status=models.Evaluation.FAILED, error=str(exc)[:500]
+            )
 
 
 def list_evaluation_matches(

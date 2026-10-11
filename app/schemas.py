@@ -55,10 +55,18 @@ class StoredRules(BaseModel):
     countries: list[str] = Field(default_factory=list)
 
 
+class EvaluationProgress(BaseModel):
+    processed: int = Field(ge=0)
+    total: int = Field(ge=0)
+
+
 class CampaignEvaluationResponse(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
     evaluation_id: str = Field(alias="evaluationId")
     campaign_id: str = Field(alias="campaignId")
     rules: StoredRules
+    status: str
+    progress: EvaluationProgress
+    error: str | None = None
     results: list[PlayerEvaluationResult]

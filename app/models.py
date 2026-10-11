@@ -20,7 +20,7 @@ class Player(Base):
 class CampaignMatch(Base):
     """Whether a player satisfies a campaign's conditions.
 
-    One row per (campaign, player). `countries` is an allowlist —
+    One row per (campaign, player, evaluation). `countries` is an allowlist —
     empty means no country restriction.
     """
 
@@ -34,3 +34,24 @@ class CampaignMatch(Base):
     minimum_level: Mapped[int] = mapped_column(nullable=False)
     countries: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
     matches: Mapped[bool] = mapped_column(nullable=False, index=True)
+
+
+class Evaluation(Base):
+    """An async campaign-evaluation run with progress tracking."""
+
+    __tablename__ = "evaluations"
+
+    PENDING = "pending"
+    RUNNING = "running"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+    evaluation_id: Mapped[str] = mapped_column(String(50), primary_key=True)
+    campaign_id: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    minimum_level: Mapped[int] = mapped_column(nullable=False)
+    countries: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default=PENDING, index=True)
+    total: Mapped[int] = mapped_column(nullable=False, default=0)
+    processed: Mapped[int] = mapped_column(nullable=False, default=0)
+    matched: Mapped[int] = mapped_column(nullable=False, default=0)
+    error: Mapped[str | None] = mapped_column(String(500), nullable=True)

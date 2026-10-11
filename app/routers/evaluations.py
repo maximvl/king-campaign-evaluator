@@ -1,57 +1,61 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
-from app import crud, models, schemas
+from app import crud, schemas
 from app.config import settings
-from app.database import get_db
+from app.database import SessionLocal, get_db
 
 router = APIRouter(tags=["evaluations"])
+
+
+def _evaluation_response(
+    run, results: list[schemas.PlayerEvaluationResult]
+) -> schemas.CampaignEvaluationResponse:
+    return schemas.CampaignEvaluationResponse(
+        evaluation_id=run.evaluation_id,
+        campaign_id=run.campaign_id,
+        rules=schemas.StoredRules(
+            minimum_level=run.minimum_level,
+            countries=run.countries,
+        ),
+        status=run.status,
+        progress=schemas.EvaluationProgress(processed=run.processed, total=run.total),
+        error=run.error,
+        results=results,
+    )
 
 
 @router.post(
     "/campaign-evaluations",
     response_model=schemas.CampaignEvaluationResponse,
-    status_code=status.HTTP_201_CREATED,
+    status_code=status.HTTP_202_ACCEPTED,
 )
-def start_evaluation(data: schemas.CampaignEvaluationRequest, db: Session = Depends(get_db)):
+def start_evaluation(
+    data: schemas.CampaignEvaluationRequest,
+    background: BackgroundTasks,
+    db: Session = Depends(get_db),
+):
     if crud.evaluation_exists(db, data.evaluation_id):
         raise HTTPException(status_code=409, detail="Evaluation already exists")
-    batch_size = settings.evaluation_batch_size
-    results: list[schemas.PlayerEvaluationResult] = []
-    for i in range(0, len(data.player_ids), batch_size):
-        chunk = data.player_ids[i : i + batch_size]
-        found: dict[str, models.Player] = {
-            p.player_id: p for p in crud.get_players_by_ids(db, chunk)
-        }
-        for pid in chunk:
-            player = found.get(pid)
-            if player is None:
-                results.append(
-                    schemas.PlayerEvaluationResult(
-                        player_id=pid, matches=False, error="player not found"
-                    )
-                )
-                continue
-            record = crud.save_match(
-                db,
-                campaign_id=data.rules.campaign_id,
-                player=player,
-                evaluation_id=data.evaluation_id,
-                minimum_level=data.rules.minimum_level,
-                countries=data.rules.countries,
-            )
-            results.append(
-                schemas.PlayerEvaluationResult(player_id=pid, matches=record.matches)
-            )
-    return schemas.CampaignEvaluationResponse(
+    run = crud.create_evaluation(
+        db,
         evaluation_id=data.evaluation_id,
         campaign_id=data.rules.campaign_id,
-        rules=schemas.StoredRules(
-            minimum_level=data.rules.minimum_level,
-            countries=data.rules.countries,
-        ),
-        results=results,
+        minimum_level=data.rules.minimum_level,
+        countries=data.rules.countries,
+        total=len(data.player_ids),
     )
+    background.add_task(
+        crud.execute_evaluation,
+        SessionLocal,
+        evaluation_id=data.evaluation_id,
+        campaign_id=data.rules.campaign_id,
+        minimum_level=data.rules.minimum_level,
+        countries=data.rules.countries,
+        player_ids=data.player_ids,
+        batch_size=settings.evaluation_batch_size,
+    )
+    return _evaluation_response(run, [])
 
 
 @router.get(
@@ -64,17 +68,13 @@ def get_evaluation(
     limit: int = Query(default=500, ge=1, le=5000),
     db: Session = Depends(get_db),
 ):
-    rows = crud.list_evaluation_matches(db, evaluation_id, skip=skip, limit=limit)
-    if not rows:
+    run = crud.get_evaluation(db, evaluation_id)
+    if run is None:
         raise HTTPException(status_code=404, detail="Evaluation not found")
-    return schemas.CampaignEvaluationResponse(
-        evaluation_id=evaluation_id,
-        campaign_id=rows[0].campaign_id,
-        rules=schemas.StoredRules(
-            minimum_level=rows[0].minimum_level,
-            countries=rows[0].countries,
-        ),
-        results=[
+    rows = crud.list_evaluation_matches(db, evaluation_id, skip=skip, limit=limit)
+    return _evaluation_response(
+        run,
+        [
             schemas.PlayerEvaluationResult(player_id=r.player_id, matches=r.matches)
             for r in rows
         ],
