@@ -52,3 +52,7 @@ Layout: `app/main.py` (app factory), `app/database.py` (engine/session/`get_db`)
 - 2026-10-11: Cut player writes (`POST/PATCH/DELETE`, `PlayerCreate/PlayerUpdate`, write crud) — players are read-only (`GET /players`, `GET /players/{id}`); seed is the only writer.
 - 2026-10-11: Fixed duplicate `lifespan` in `app/main.py` shadowing the seeding one — single lifespan now runs `create_all` + `seed_players` on boot.
 - 2026-10-11: Removed dummy `Item` model, schemas, crud, router, and tests — players are the only domain left.
+- 2026-10-11: Added `CampaignMatch(campaign_id, player_id)` composite PK with `minimum_level`, `countries` JSON allowlist (empty = no restriction), `matches`, plus `evaluate_match`/`save_match` in `crud.py` — no REST yet, service-level only.
+- 2026-10-11: Dropped FK from `CampaignMatch.player_id` — plain string, no referential link to `players`.
+- 2026-10-11: Switched `CampaignMatch` to surrogate `id` PK with `UniqueConstraint(campaign_id, player_id)` and index on `campaign_id` — combo still unique, lookups by campaign are indexed.
+- 2026-10-11: Made `campaign_id` required in `list_matches` — matches are always listed per campaign.

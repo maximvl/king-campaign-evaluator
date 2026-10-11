@@ -17,3 +17,61 @@ def list_players(
             models.Player.player_id
         ).offset(skip).limit(limit)
     return list(db.scalars(stmt).all())
+
+
+def evaluate_match(
+    player: models.Player, minimum_level: int, countries: list[str]
+) -> bool:
+    if player.level < minimum_level:
+        return False
+    if countries and player.country not in countries:
+        return False
+    return True
+
+
+def save_match(
+    db: Session,
+    *,
+    campaign_id: str,
+    player: models.Player,
+    minimum_level: int,
+    countries: list[str],
+) -> models.CampaignMatch:
+    """Evaluate conditions against a player and upsert the result."""
+    result = evaluate_match(player, minimum_level, countries)
+    record = get_match(db, campaign_id, player.player_id)
+    if record is None:
+        record = models.CampaignMatch(campaign_id=campaign_id, player_id=player.player_id)
+        db.add(record)
+    record.minimum_level = minimum_level
+    record.countries = list(countries)
+    record.matches = result
+    db.commit()
+    db.refresh(record)
+    return record
+
+
+def get_match(db: Session, campaign_id: str, player_id: str) -> models.CampaignMatch | None:
+    stmt = (
+        select(models.CampaignMatch)
+        .where(models.CampaignMatch.campaign_id == campaign_id)
+        .where(models.CampaignMatch.player_id == player_id)
+    )
+    return db.scalars(stmt).one_or_none()
+
+
+def list_matches(
+    db: Session,
+    campaign_id: str,
+    skip: int = 0,
+    limit: int = 100,
+    matches_only: bool = False,
+) -> list[models.CampaignMatch]:
+    stmt = (
+        select(models.CampaignMatch)
+        .where(models.CampaignMatch.campaign_id == campaign_id)
+        .order_by(models.CampaignMatch.player_id)
+    )
+    if matches_only:
+        stmt = stmt.where(models.CampaignMatch.matches.is_(True))
+    return list(db.scalars(stmt.offset(skip).limit(limit)).all())
